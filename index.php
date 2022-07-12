@@ -34,7 +34,7 @@ require_once('lib.php');
 $id = required_param('id', PARAM_INT); // Course Module ID.
 
 if (!$course = $DB->get_record('course', array('id' => $id))) {
-    print_error('error:coursemisconfigured', 'facetoface');
+    throw new moodle_exception('error:coursemisconfigured', 'facetoface');
 }
 
 require_course_login($course);
@@ -75,7 +75,6 @@ if (!$facetofaces = get_all_instances_in_course('facetoface', $course)) {
 $timenow = time();
 
 $table = new html_table();
-$table->width = '100%';
 
 if ($course->format == 'weeks' && has_capability('mod/facetoface:viewattendees', $context)) {
     $table->head  = array ($strweek, $strfacetofacename, get_string('sign-ups', 'facetoface'));
@@ -102,10 +101,10 @@ foreach ($facetofaces as $facetoface) {
 
     if (!$facetoface->visible) {
         // Show dimmed if the mod is hidden.
-        $link = html_writer::link("view.php?f=$facetoface->id", $facetoface->name, array('class' => 'dimmed'));
+        $link = html_writer::link("view.php?f=$facetoface->id", format_string($facetoface->name), array('class' => 'dimmed'));
     } else {
         // Show normal if the mod is visible.
-        $link = html_writer::link("view.php?f=$facetoface->id", $facetoface->name);
+        $link = html_writer::link("view.php?f=$facetoface->id", format_string($facetoface->name));
     }
 
     $printsection = '';

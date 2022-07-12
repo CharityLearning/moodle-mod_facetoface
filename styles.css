@@ -31,7 +31,7 @@
     padding: 3px;
 }
 .f2factivityname {
-    line-height:1.5;
+    line-height: 1.5;
 }
 
 body.path-mod-facetoface table.f2fsession td.c0 {
@@ -41,31 +41,18 @@ body.path-mod-facetoface table.f2fsession td.c0 {
 body.path-mod-facetoface table.f2fsession {
     width: 100%;
 }
-table.table90 {
-    width: 90%;
+table.f2fsessionlist tr.highlight td.cell {
+    background-color: #afa;
 }
-table.table50 {
-    width: 50%;
-    text-align: left;
-}
-table.inlinetable {
-    display: inline-table;
-    border: 0;
-}
-tr.highlight td.cell {
-    background-color: #AAFFAA;
-}
-a.f2fsessionlinks, td.f2fsessionnotice, span.f2fsessionnotice {
+a.f2fsessionlinks,
+td.f2fsessionnotice,
+span.f2fsessionnotice {
     font-size: 11px;
     font-weight: bold;
     line-height: 14px;
 }
 span.f2fonepointfive {
-    line-height:1.5;
-}
-span.errorstring {
-    font-size: 12px;
-    line-height: 18px;
+    line-height: 1.5;
 }
 
 body#page-mod-facetoface-view div#page-content table.sessions {

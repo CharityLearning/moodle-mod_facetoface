@@ -37,19 +37,20 @@ $s = required_param('s', PARAM_INT);
 $takeattendance = optional_param('takeattendance', false, PARAM_BOOL); // Take attendance.
 $cancelform = optional_param('cancelform', false, PARAM_BOOL); // Cancel request.
 $backtoallsessions = optional_param('backtoallsessions', 0, PARAM_INT); // Face-to-face activity to return to.
+$download = optional_param('download', '', PARAM_ALPHA); // Download attendees.
 
 // Load data.
 if (!$session = facetoface_get_session($s)) {
-    print_error('error:incorrectcoursemodulesession', 'facetoface');
+    throw new moodle_exception('error:incorrectcoursemodulesession', 'facetoface');
 }
 if (!$facetoface = $DB->get_record('facetoface', array('id' => $session->facetoface))) {
-    print_error('error:incorrectfacetofaceid', 'facetoface');
+    throw new moodle_exception('error:incorrectfacetofaceid', 'facetoface');
 }
 if (!$course = $DB->get_record('course', array('id' => $facetoface->course))) {
-    print_error('error:coursemisconfigured', 'facetoface');
+    throw new moodle_exception('error:coursemisconfigured', 'facetoface');
 }
 if (!$cm = get_coursemodule_from_instance('facetoface', $facetoface->id, $course->id)) {
-    print_error('error:incorrectcoursemodule', 'facetoface');
+    throw new moodle_exception('error:incorrectcoursemodule', 'facetoface');
 }
 
 // Load attendees.
@@ -99,21 +100,26 @@ if ($requests && !$takeattendance) {
 
 // Check the user is allowed to view this page.
 if (!$canviewattendees && !$cantakeattendance && !$canapproverequests && !$canviewcancellations) {
-    print_error('nopermissions', '', "{$CFG->wwwroot}/mod/facetoface/view.php?id={$cm->id}", get_string('view'));
+    throw new moodle_exception('nopermissions', '', "{$CFG->wwwroot}/mod/facetoface/view.php?id={$cm->id}", get_string('view'));
 }
 
 // Check user has permissions to take attendance.
 if ($takeattendance && !$cantakeattendance) {
-    print_error('nopermissions', '', '', get_capability_string('mod/facetoface:takeattendance'));
+    throw new moodle_exception('nopermissions', '', '', get_capability_string('mod/facetoface:takeattendance'));
 }
 
+if (!empty($download) && $canviewattendees) {
+    // Download list of attendees
+    facetoface_download_attendees(format_string($facetoface->name), $session, $attendees, $download);
+    exit();
+}
 
 /*
  * Handle submitted data
  */
 if ($form = data_submitted()) {
     if (!confirm_sesskey()) {
-        print_error('confirmsesskeybad', 'error');
+        throw new moodle_exception('confirmsesskeybad', 'error');
     }
 
     $return = "{$CFG->wwwroot}/mod/facetoface/attendees.php?s={$s}&backtoallsessions={$backtoallsessions}";
@@ -197,7 +203,7 @@ echo $OUTPUT->header();
 // If taking attendance, make sure the session has already started.
 if ($takeattendance && $session->datetimeknown && !facetoface_has_session_started($session, time())) {
     $link = "{$CFG->wwwroot}/mod/facetoface/attendees.php?s={$session->id}";
-    print_error('error:canttakeattendanceforunstartedsession', 'facetoface', $link);
+    throw new moodle_exception('error:canttakeattendanceforunstartedsession', 'facetoface', $link);
 }
 
 echo $OUTPUT->box_start();
@@ -228,11 +234,13 @@ if ($canviewattendees || $cantakeattendance) {
             echo html_writer::tag('p', get_string('attendanceinstructions', 'facetoface'));
             echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => $USER->sesskey));
             echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 's', 'value' => $s));
-            echo html_writer::empty_tag('input', array('type' => 'hidden', ' name' => 'backtoallsessions', 'value' => $backtoallsessions)) . '</p>';
+            echo html_writer::empty_tag('input', array('type' => 'hidden', ' name' => 'backtoallsessions',
+                    'value' => $backtoallsessions)) . '</p>';
 
             // Prepare status options array.
+            $statuses = facetoface_statuses();
             $statusoptions = array();
-            foreach ($MDL_F2F_STATUS as $key => $value) {
+            foreach ($statuses as $key => $value) {
                 if ($key <= MDL_F2F_STATUS_BOOKED) {
                     continue;
                 }
@@ -243,7 +251,6 @@ if ($canviewattendees || $cantakeattendance) {
 
         $table = new html_table();
         $table->head = array(get_string('name'));
-        $table->summary = get_string('attendeestablesummary', 'facetoface');
         $table->align = array('left');
         $table->size = array('100%');
 
@@ -287,7 +294,8 @@ if ($canviewattendees || $cantakeattendance) {
                         $data[] = $attendee->discountcode;
                     }
                 }
-                $data[] = str_replace(' ', '&nbsp;', get_string('status_'.facetoface_get_status($attendee->statuscode), 'facetoface'));
+                $data[] = str_replace(' ', '&nbsp;',
+                    get_string('status_'.facetoface_get_status($attendee->statuscode), 'facetoface'));
             }
             $table->data[] = $data;
         }
@@ -297,7 +305,8 @@ if ($canviewattendees || $cantakeattendance) {
         if ($takeattendance) {
             echo html_writer::start_tag('p');
             echo html_writer::empty_tag('input', array('type' => 'submit', 'value' => get_string('saveattendance', 'facetoface')));
-            echo '&nbsp;' . html_writer::empty_tag('input', array('type' => 'submit', 'name' => 'cancelform', 'value' => get_string('cancel')));
+            echo '&nbsp;' . html_writer::empty_tag('input', array('type' => 'submit', 'name' => 'cancelform',
+                    'value' => get_string('cancel')));
             echo html_writer::end_tag('p') . html_writer::end_tag('form');
         } else {
 
@@ -306,7 +315,8 @@ if ($canviewattendees || $cantakeattendance) {
             if ($cantakeattendance && $session->datetimeknown && facetoface_has_session_started($session, time())) {
 
                 // Take attendance.
-                $attendanceurl = new moodle_url('attendees.php', array('s' => $session->id, 'takeattendance' => '1', 'backtoallsessions' => $backtoallsessions));
+                $attendanceurl = new moodle_url('attendees.php', array('s' => $session->id, 'takeattendance' => '1',
+                    'backtoallsessions' => $backtoallsessions));
                 echo html_writer::link($attendanceurl, get_string('takeattendance', 'facetoface')) . ' - ';
             }
         }
@@ -321,6 +331,10 @@ if ($canviewattendees || $cantakeattendance) {
             echo html_writer::link($editattendeeslink, get_string('addremoveattendees', 'facetoface')) . ' - ';
         }
     }
+    echo html_writer::link("attendees.php?s=$session->id&backtoallsessions=$session->facetoface&download=ods",
+            get_string('downloadods')) . ' - ';
+    echo html_writer::link("attendees.php?s=$session->id&backtoallsessions=$session->facetoface&download=xls",
+            get_string('downloadexcel')) . ' - ';
 }
 
 // Go back.
@@ -352,12 +366,13 @@ if ($canapproverequests) {
         echo html_writer::start_tag('form', array('action' => $action->out(), 'method' => 'post'));
         echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => $USER->sesskey));
         echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 's', 'value' => $s));
-        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'backtoallsessions', 'value' => $backtoallsessions)) . html_writer::end_tag('p');
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'backtoallsessions',
+                'value' => $backtoallsessions)) . html_writer::end_tag('p');
 
         $table = new html_table();
-        $table->summary = get_string('requeststablesummary', 'facetoface');
         $table->head = array(get_string('name'), get_string('timerequested', 'facetoface'),
-                            get_string('decidelater', 'facetoface'), get_string('decline', 'facetoface'), get_string('approve', 'facetoface'));
+                get_string('decidelater', 'facetoface'), get_string('decline', 'facetoface'),
+                get_string('approve', 'facetoface'));
         $table->align = array('left', 'center', 'center', 'center', 'center');
 
         foreach ($requests as $attendee) {
@@ -365,16 +380,20 @@ if ($canapproverequests) {
             $attendeelink = new moodle_url('/user/view.php', array('id' => $attendee->id, 'course' => $course->id));
             $data[] = html_writer::link($attendeelink, format_string(fullname($attendee)));
             $data[] = userdate($attendee->timerequested, get_string('strftimedatetime'));
-            $data[] = html_writer::empty_tag('input', array('type' => 'radio', 'name' => 'requests['.$attendee->id.']', 'value' => '0', 'checked' => 'checked'));
-            $data[] = html_writer::empty_tag('input', array('type' => 'radio', 'name' => 'requests['.$attendee->id.']', 'value' => '1'));
+            $data[] = html_writer::empty_tag('input', array('type' => 'radio', 'name' => 'requests['.$attendee->id.']',
+                'value' => '0', 'checked' => 'checked'));
+            $data[] = html_writer::empty_tag('input', array('type' => 'radio', 'name' => 'requests['.$attendee->id.']',
+                'value' => '1'));
             $disabled = ($canbookuser) ? array() : array('disabled' => 'disabled');
-            $data[] = html_writer::empty_tag('input', array_merge(array('type' => 'radio', 'name' => 'requests['.$attendee->id.']', 'value' => '2'), $disabled));
+            $data[] = html_writer::empty_tag('input', array_merge(array('type' => 'radio', 'name' => 'requests['.$attendee->id.']',
+                'value' => '2'), $disabled));
             $table->data[] = $data;
         }
 
         echo html_writer::table($table);
 
-        echo html_writer::tag('p', html_writer::empty_tag('input', array('type' => 'submit', 'value' => get_string('updaterequests', 'facetoface'))));
+        echo html_writer::tag('p', html_writer::empty_tag('input', array('type' => 'submit',
+            'value' => get_string('updaterequests', 'facetoface'))));
         echo html_writer::end_tag('form');
     }
 }
