@@ -35,7 +35,7 @@ class mod_facetoface_renderer extends plugin_renderer_base {
     /**
      * Builds session list table given an array of sessions
      */
-    public function print_session_list_table($customfields, $sessions, $viewattendees, $editsessions) {
+    public function print_session_list_table($customfields, $sessions, $viewattendees, $editsessions, $signuplinks = true) {
         $output = '';
 
         $tableheader = array();
@@ -96,12 +96,11 @@ class mod_facetoface_renderer extends plugin_renderer_base {
                     if (!empty($allsessiondates)) {
                         $allsessiondates .= html_writer::empty_tag('br');
                     }
-                    $allsessiondates .= userdate($date->timestart, get_string('strftimedate'));
+                    $allsessiondates .= \mod_facetoface\session::get_readable_session_date($date);
                     if (!empty($allsessiontimes)) {
                         $allsessiontimes .= html_writer::empty_tag('br');
                     }
-                    $allsessiontimes .= userdate($date->timestart, get_string('strftimetime')).
-                        ' - '.userdate($date->timefinish, get_string('strftimetime'));
+                    $allsessiontimes .= \mod_facetoface\session::get_readable_session_time($date);
                 }
             } else {
                 $allsessiondates = get_string('wait-listed', 'facetoface');
@@ -172,7 +171,7 @@ class mod_facetoface_renderer extends plugin_renderer_base {
                     $options .= html_writer::link('cancelsignup.php?s=' . $session->id . '&backtoallsessions=' . $session->facetoface,
                         get_string('cancelbooking', 'facetoface'), array('title' => get_string('cancelbooking', 'facetoface')));
                 }
-            } else if (!$sessionstarted and !$bookedsession) {
+            } else if (!$sessionstarted && !$bookedsession && $signuplinks) {
                 $options .= html_writer::link('signup.php?s='.$session->id.'&backtoallsessions='.$session->facetoface,
                     get_string('signup', 'facetoface'));
             }

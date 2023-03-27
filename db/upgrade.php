@@ -758,5 +758,62 @@ function xmldb_facetoface_upgrade($oldversion=0) {
         upgrade_mod_savepoint(true, 2022031800, 'facetoface');
     }
 
+    if ($oldversion < 2022091900) {
+        $table = new xmldb_table('facetoface');
+        $field = new xmldb_field('signuptype', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'allowcancellationsdefault');
+
+        // Conditionally launch add field signuptype.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Facetoface savepoint reached.
+        upgrade_mod_savepoint(true, 2022091900, 'facetoface');
+    }
+
+    if ($oldversion < 2022101100) {
+        $table = new xmldb_table('facetoface');
+        $field = new xmldb_field('multiplesignupmethod', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'signuptype');
+
+        // Conditionally launch add field multiplesignupmethod.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Facetoface savepoint reached.
+        upgrade_mod_savepoint(true, 2022101100, 'facetoface');
+    }
+
+    if ($oldversion < 2023031300) {
+        // Get all old admin settings and copy them into the new admin settings (in correct namespace).
+        $settings = [
+            'fromaddress',
+            'session_roles',
+            'limit_candidates',
+            'manageremail_header',
+            'addchangemanageremail',
+            'manageraddressformat',
+            'manageraddressformatreadable',
+            'cost_header',
+            'hidecost',
+            'hidediscount',
+            'icalendar_header',
+            'oneemailperday',
+            'disableicalcancel',
+            'customfields_header',
+            'sitenotices_header',
+        ];
+
+        foreach ($settings as $setting) {
+            $oldvalue = get_config(null, 'facetoface_' . $setting);
+            if ($oldvalue !== false) {
+                set_config($setting, $oldvalue, 'facetoface');
+            }
+        }
+
+        // Facetoface savepoint reached.
+        upgrade_mod_savepoint(true, 2023031300, 'facetoface');
+    }
+
     return $result;
 }

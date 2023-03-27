@@ -68,14 +68,36 @@ class mod_facetoface_mod_form extends moodleform_mod {
         $mform->setDefault('display', 6);
         $mform->addHelpButton('display', 'sessionsoncoursepage', 'facetoface');
 
+        // Set a hidden element to use to hide settings if approvals are disabled.
+        $mform->addElement('hidden', 'enableapprovals', get_config('facetoface', 'enableapprovals'));
+        $mform->setType('enableapprovals', PARAM_BOOL);
+
         $mform->addElement('checkbox', 'approvalreqd', get_string('approvalreqd', 'facetoface'));
         $mform->addHelpButton('approvalreqd', 'approvalreqd', 'facetoface');
+        $mform->hideIf('approvalreqd', 'enableapprovals', 'eq', 0);
 
         if (has_capability('mod/facetoface:configurecancellation', $this->context)) {
             $mform->addElement('advcheckbox', 'allowcancellationsdefault', get_string('allowcancellationsdefault', 'facetoface'));
             $mform->setDefault('allowcancellationsdefault', 1);
             $mform->addHelpButton('allowcancellationsdefault', 'allowcancellationsdefault', 'facetoface');
         }
+
+        $signupoptions = array(
+            MOD_FACETOFACE_SIGNUP_SINGLE   => get_string('single', 'facetoface'),
+            MOD_FACETOFACE_SIGNUP_MULTIPLE => get_string('multiple', 'facetoface'),
+        );
+        $mform->addElement('select', 'signuptype', get_string('signuptype', 'facetoface'), $signupoptions);
+        $mform->setDefault('signuptype', MOD_FACETOFACE_SIGNUP_SINGLE);
+        $mform->addHelpButton('signuptype', 'signuptype', 'facetoface');
+
+        $multiplesignupmethods = array(
+            MOD_FACETOFACE_SIGNUP_MULTIPLE_PER_SESSION  => get_string('multiplesignuppersession', 'facetoface'),
+            MOD_FACETOFACE_SIGNUP_MULTIPLE_PER_ACTIVITY => get_string('multiplesignupperactivity', 'facetoface'),
+        );
+        $mform->addElement('select', 'multiplesignupmethod', get_string('multiplesignupmethod', 'facetoface'), $multiplesignupmethods);
+        $mform->setDefault('signuptype', MOD_FACETOFACE_SIGNUP_MULTIPLE_PER_SESSION);
+        $mform->addHelpButton('multiplesignupmethod', 'multiplesignupmethod', 'facetoface');
+        $mform->hideIf('multiplesignupmethod', 'signuptype', 'eq', MOD_FACETOFACE_SIGNUP_SINGLE);
 
         $mform->addElement('header', 'calendaroptions', get_string('calendaroptions', 'facetoface'));
 
@@ -98,21 +120,26 @@ class mod_facetoface_mod_form extends moodleform_mod {
         $mform->addRule('shortname', null, 'maxlength', 32);
 
         // Request message.
-        $mform->addElement('header', 'request', get_string('requestmessage', 'facetoface'));
-        $mform->addHelpButton('request', 'requestmessage', 'facetoface');
+        if (get_config('facetoface', 'enableapprovals')) {
+            $mform->addElement('header', 'request', get_string('requestmessage', 'facetoface'));
+            $mform->addHelpButton('request', 'requestmessage', 'facetoface');
+        }
 
         $mform->addElement('text', 'requestsubject', get_string('email:subject', 'facetoface'), array('size' => '55'));
         $mform->setType('requestsubject', PARAM_TEXT);
         $mform->setDefault('requestsubject', get_string('setting:defaultrequestsubjectdefault', 'facetoface'));
         $mform->disabledIf('requestsubject', 'approvalreqd');
+        $mform->hideIf('requestsubject', 'enableapprovals', 'eq', 0);
 
         $mform->addElement('textarea', 'requestmessage', get_string('email:message', 'facetoface'), 'wrap="virtual" rows="15" cols="70"');
         $mform->setDefault('requestmessage', get_string('setting:defaultrequestmessagedefault', 'facetoface'));
         $mform->disabledIf('requestmessage', 'approvalreqd');
+        $mform->hideIf('requestmessage', 'enableapprovals', 'eq', 0);
 
         $mform->addElement('textarea', 'requestinstrmngr', get_string('email:instrmngr', 'facetoface'), 'wrap="virtual" rows="10" cols="70"');
         $mform->setDefault('requestinstrmngr', get_string('setting:defaultrequestinstrmngrdefault', 'facetoface'));
         $mform->disabledIf('requestinstrmngr', 'approvalreqd');
+        $mform->hideIf('requestinstrmngr', 'enableapprovals', 'eq', 0);
 
         // Confirmation message.
         $mform->addElement('header', 'confirmation', get_string('confirmationmessage', 'facetoface'));
